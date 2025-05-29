@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>获取当前经纬度</title>
+    <script>
+        function getLocation() {
+            // 检查浏览器是否支持地理位置API
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(showPosition, showError);
+            } else {
+                document.getElementById("output").innerHTML = "浏览器不支持地理定位功能。";
+            }
+        }
+
+        function showPosition(position) {
+            const latitude = position.coords.latitude;
+            const longitude = position.coords.longitude;
+            document.getElementById("output").innerHTML = `纬度: ${latitude} <br> 经度: ${longitude}`;
+        }
+
+        function showError(error) {
+            switch (error.code) {
+                case error.PERMISSION_DENIED:
+                    document.getElementById("output").innerHTML = "用户拒绝了地理定位请求。";
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    document.getElementById("output").innerHTML = "位置信息不可用。";
+                    break;
+                case error.TIMEOUT:
+                    document.getElementById("output").innerHTML = "请求超时。";
+                    break;
+                case error.UNKNOWN_ERROR:
+                    document.getElementById("output").innerHTML = "发生未知错误。";
+                    break;
+            }
+        }
+    </script>
+</head>
+<body>
+    <h1>获取当前经纬度</h1>
+    <button onclick="getLocation()">获取位置</button>
+    <p id="output">点击按钮以获取您的当前位置。</p>
+</body>
+</html>
