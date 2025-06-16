@@ -1,0 +1,8 @@
+<script>
+    window.bridgeCore = {
+        receiver: function(t, e, a) {
+            alert("获得到的 token: " + a); // 通过弹窗显示 token
+        }
+    }
+    a_bridge.call(JSON.stringify({"method":"/business/getSToken","uniqueId":"111111111","params":{"type":2}}))
+</script>
